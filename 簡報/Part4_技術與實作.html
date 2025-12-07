@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 4 - 技術與實作</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .nav-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none !important;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.4); transform: translateY(-2px); text-decoration: none !important; }
+        .nav-btn:visited, .nav-btn:active { text-decoration: none !important; color: white; }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.25);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.4);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover { background: rgba(255,255,255,0.5); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            padding: 50px;
+            max-width: 1400px;
+            width: 95%;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+
+        h1 { color: #1e3c72; font-size: 48px; margin-bottom: 20px; text-align: center; }
+        h2 { color: #2a5298; font-size: 34px; margin-bottom: 25px; border-bottom: 3px solid #1e3c72; padding-bottom: 10px; }
+        h3 { color: #1e3c72; font-size: 22px; margin: 18px 0 10px 0; }
+        p, li { font-size: 19px; line-height: 1.8; color: #444; margin-bottom: 10px; }
+        ul, ol { margin-left: 25px; }
+        code { background: #f0f2f5; padding: 3px 8px; border-radius: 6px; font-family: 'Consolas', monospace; color: #d63384; font-weight: 600; }
+        pre { background: #282c34; color: #abb2bf; padding: 20px; border-radius: 12px; overflow-x: auto; margin: 15px 0; font-size: 15px; line-height: 1.5; font-family: 'Consolas', monospace; }
+
+        .highlight { background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%); padding: 3px 10px; border-radius: 6px; font-weight: bold; color: #004d40; }
+
+        .concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
+        .concept-card { background: #f8f9fa; padding: 22px; border-radius: 14px; border: 1px solid #e9ecef; transition: transform 0.3s; }
+        .concept-card:hover { transform: translateY(-6px); border-color: #4facfe; }
+
+        .box { padding: 22px; border-radius: 12px; margin: 18px 0; border-left: 6px solid; font-size: 18px; }
+        .info { background: #e3f2fd; border-color: #2196f3; color: #0d47a1; }
+        .warning { background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .success { background: #d4edda; border-color: #28a745; color: #155724; }
+
+        .indicators { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 4000; padding: 10px 20px; background: rgba(0,0,0,0.3); border-radius: 30px; backdrop-filter: blur(5px); }
+        .dot { width: 12px; height: 12px; background: rgba(255,255,255,0.4); border-radius: 50%; cursor: pointer; transition: all 0.3s; }
+        .dot.active { background: #4facfe; transform: scale(1.3); }
+
+        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 20px; }
+        @media (max-width: 900px) { .two-column { grid-template-columns: 1fr; } }
+
+        .step-list { counter-reset: step; list-style: none; margin-left: 0; }
+        .step-list li { position: relative; padding-left: 50px; margin-bottom: 18px; }
+        .step-list li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .emoji-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+
+        .file-tree { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 12px; font-family: 'Consolas', monospace; font-size: 15px; line-height: 1.8; }
+        .file-tree .folder { color: #dcb67a; }
+        .file-tree .file { color: #9cdcfe; }
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <div class="nav-title">Vibe Coding 氛圍編程 | Part 4: 技術與實作</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="goToSlide(0)">首頁</button>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.facebook.com/yt3a01" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.youtube.com/@3aLearn" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <p style="color: #4facfe; letter-spacing: 3px; font-size: 18px; margin-bottom: 10px;">VIBE CODING 氛圍編程 | PART 4</p>
+                <h1 style="font-size: 56px;">技術與實作</h1>
+                <h2 style="border: none; font-weight: normal; font-size: 26px; color: #666; max-width: 800px;">
+                    打造你的第一個 AI 聊天助手
+                </h2>
+                <div style="margin-top: 35px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                    <span class="highlight">Flask 後端</span>
+                    <span class="highlight">OpenAI API</span>
+                    <span class="highlight">Google Gemini</span>
+                    <span class="highlight">環境變數</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 學習目標 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🎯 本單元學習目標</h2>
+                <p>實際動手建立一個可以運作的 AI 聊天應用程式！</p>
+                <div class="concept-grid" style="margin-top: 25px;">
+                    <div class="concept-card">
+                        <span class="emoji-icon">🐍</span>
+                        <h3>Python Flask</h3>
+                        <p>學習使用 Flask 框架建立後端 API</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔌</span>
+                        <h3>API 整合</h3>
+                        <p>連接 OpenAI 或 Google Gemini API</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔐</span>
+                        <h3>環境變數</h3>
+                        <p>安全管理 API Key</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">💬</span>
+                        <h3>聊天介面</h3>
+                        <p>建立現代化的前端對話介面</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 從 GitHub 下載專案 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>📥 從 GitHub 下載專案</h2>
+                <p>專案已上傳至 GitHub，你可以直接下載使用：</p>
+                <div class="box info" style="margin-top: 20px;">
+                    <p style="font-size: 20px;"><strong>專案網址：</strong><br>
+                    <code style="font-size: 18px;">https://github.com/ChatGPT3a01/my_first_ai_app</code></p>
+                </div>
+                <div class="two-column" style="margin-top: 25px;">
+                    <div>
+                        <h3>方法一：下載 ZIP（推薦新手）</h3>
+                        <ol class="step-list">
+                            <li>開啟上方 GitHub 網址</li>
+                            <li>點擊綠色「Code」按鈕</li>
+                            <li>選擇「Download ZIP」</li>
+                            <li>解壓縮到你想要的資料夾</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <h3>方法二：使用 Git Clone</h3>
+                        <pre style="font-size: 14px;"># 開啟命令提示字元，切換到目標資料夾
+cd D:\你的資料夾
+
+# 複製專案
+git clone https://github.com/ChatGPT3a01/my_first_ai_app.git
+
+# 進入專案資料夾
+cd my_first_ai_app</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 專案結構 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>📁 專案結構</h2>
+                <div class="two-column">
+                    <div class="file-tree">
+                        <span class="folder">my_first_ai_app/</span><br>
+                        ├── <span class="file">app.py</span>              # Flask 後端程式<br>
+                        ├── <span class="file">requirements.txt</span>    # Python 套件清單<br>
+                        ├── <span class="file">.env.example</span>        # 環境變數範例<br>
+                        ├── <span class="file">.env</span>                # 環境變數（需自建）<br>
+                        ├── <span class="file">.gitignore</span>          # Git 忽略檔案<br>
+                        ├── <span class="file">啟動.bat</span>            # Windows 快速啟動<br>
+                        └── <span class="folder">templates/</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file">index.html</span>      # 前端網頁
+                    </div>
+                    <div>
+                        <div class="box info">
+                            <h3>核心檔案說明</h3>
+                            <ul>
+                                <li><strong>app.py</strong> - 處理 API 請求與 AI 回應</li>
+                                <li><strong>.env</strong> - 儲存 API Key（不上傳 Git）</li>
+                                <li><strong>templates/</strong> - 前端介面</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 環境變數設定 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🔐 環境變數設定</h2>
+                <p>API Key 不應該直接寫在程式碼中，而是透過 <code>.env</code> 檔案管理</p>
+                <div class="two-column" style="margin-top: 20px;">
+                    <div>
+                        <h3>.env.example 範例</h3>
+                        <pre># AI Provider 選擇
+# 設定為 openai 或 google
+AI_PROVIDER=openai
+
+# OpenAI API Key
+OPENAI_API_KEY=sk-your-key-here
+
+# Google Gemini API Key
+GOOGLE_API_KEY=your-key-here</pre>
+                    </div>
+                    <div>
+                        <div class="box warning">
+                            <h3>安全提醒</h3>
+                            <ul>
+                                <li><code>.env</code> 檔案必須加入 <code>.gitignore</code></li>
+                                <li>永遠不要將 API Key 上傳到 GitHub</li>
+                                <li>只提供 <code>.env.example</code> 作為範例</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 取得 API Key -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🔑 如何取得 API Key</h2>
+                <div class="two-column">
+                    <div class="box info">
+                        <h3>OpenAI API Key</h3>
+                        <ol class="step-list">
+                            <li>前往 platform.openai.com/api-keys</li>
+                            <li>登入或註冊帳號</li>
+                            <li>點擊「Create new secret key」</li>
+                            <li>複製 API Key 貼到 .env 檔案</li>
+                        </ol>
+                    </div>
+                    <div class="box success">
+                        <h3>Google Gemini API Key</h3>
+                        <ol class="step-list">
+                            <li>前往 aistudio.google.com/app/apikey</li>
+                            <li>登入 Google 帳號</li>
+                            <li>點擊「Create API Key」</li>
+                            <li>複製 API Key 貼到 .env 檔案</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Flask 後端程式碼 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🐍 Flask 後端核心程式碼</h2>
+                <pre>from flask import Flask, request, jsonify, render_template
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # 載入環境變數
+
+app = Flask(__name__)
+
+# 讀取 AI 提供者設定
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'openai')
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_message = request.json.get('message')
+
+    if AI_PROVIDER == 'openai':
+        response = call_openai(user_message)
+    else:
+        response = call_google(user_message)
+
+    return jsonify({'response': response})</pre>
+            </div>
+        </div>
+
+        <!-- Slide 7: OpenAI API 呼叫 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🤖 OpenAI API 呼叫</h2>
+                <pre>from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+def call_openai(message):
+    """呼叫 OpenAI API"""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "你是一個友善的 AI 助手"},
+            {"role": "user", "content": message}
+        ],
+        max_tokens=1000
+    )
+    return response.choices[0].message.content</pre>
+                <div class="box info" style="margin-top: 15px;">
+                    <p><strong>說明：</strong>使用 <code>gpt-4o-mini</code> 模型，成本較低且速度快</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Google Gemini API 呼叫 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🌐 Google Gemini API 呼叫</h2>
+                <pre>import google.generativeai as genai
+
+genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+def call_google(message):
+    """呼叫 Google Gemini API"""
+    response = model.generate_content(message)
+    return response.text</pre>
+                <div class="box success" style="margin-top: 15px;">
+                    <p><strong>優點：</strong>Google Gemini 有免費額度，適合學習和測試使用</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 前端介面 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>💬 前端聊天介面</h2>
+                <div class="two-column">
+                    <div>
+                        <h3>關鍵功能</h3>
+                        <ul>
+                            <li>現代化的聊天氣泡設計</li>
+                            <li>即時回應與載入動畫</li>
+                            <li>支援 Enter 鍵送出訊息</li>
+                            <li>錯誤處理機制</li>
+                            <li>響應式設計</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <pre>&lt;script&gt;
+async function sendMessage() {
+  const response = await fetch('/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: userInput
+    })
+  });
+  const data = await response.json();
+  displayMessage(data.response);
+}
+&lt;/script&gt;</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 啟動應用 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🚀 啟動應用程式</h2>
+                <div class="two-column">
+                    <div>
+                        <h3>Windows 快速啟動</h3>
+                        <ol class="step-list">
+                            <li>複製 .env.example 為 .env</li>
+                            <li>編輯 .env 填入 API Key</li>
+                            <li>雙擊執行「啟動.bat」</li>
+                            <li>開啟瀏覽器訪問 http://127.0.0.1:5000</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <h3>手動安裝</h3>
+                        <pre># 建立虛擬環境
+python -m venv venv
+
+# 啟動虛擬環境
+venv\Scripts\activate
+
+# 安裝套件
+pip install -r requirements.txt
+
+# 啟動應用
+python app.py</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 實際效果 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>✨ 完成效果</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">💬</span>
+                        <h3>即時對話</h3>
+                        <p>輸入訊息，AI 即時回應</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔄</span>
+                        <h3>雙 API 支援</h3>
+                        <p>OpenAI 或 Google 二選一</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">📱</span>
+                        <h3>響應式設計</h3>
+                        <p>手機、平板、電腦都能用</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔐</span>
+                        <h3>安全設計</h3>
+                        <p>API Key 安全管理</p>
+                    </div>
+                </div>
+                <div class="box info" style="margin-top: 20px;">
+                    <p><strong>GitHub 專案：</strong>https://github.com/ChatGPT3a01/my_first_ai_app</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 總結 -->
+        <div class="slide">
+            <div class="content-card" style="text-align: center;">
+                <h2 style="border: none;">Part 4 重點回顧</h2>
+                <div class="concept-grid" style="text-align: left; margin-top: 30px;">
+                    <div class="concept-card">
+                        <h3>專案架構</h3>
+                        <p>Flask 後端 + HTML 前端 + 環境變數管理</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>API 整合</h3>
+                        <p>OpenAI 和 Google Gemini 雙支援</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>安全性</h3>
+                        <p>.env 檔案管理敏感資訊</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>實作成果</h3>
+                        <p>完整可運作的 AI 聊天助手</p>
+                    </div>
+                </div>
+                <div style="margin-top: 40px;">
+                    <p style="font-size: 24px; color: #1e3c72; font-weight: bold;">
+                        下一單元：總結與展望
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="nav-arrow prev-arrow" id="prevBtn" onclick="changeSlide(-1)">❮</button>
+    <button class="nav-arrow next-arrow" id="nextBtn" onclick="changeSlide(1)">❯</button>
+    <div class="indicators" id="indicatorContainer"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function init() {
+            createIndicators();
+            showSlide(0);
+            updateButtons();
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        }
+
+        function createIndicators() {
+            const container = document.getElementById('indicatorContainer');
+            container.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => goToSlide(index);
+                container.appendChild(dot);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= totalSlides) index = totalSlides - 1;
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            currentSlide = index;
+            document.querySelectorAll('.dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+            updateButtons();
+        }
+
+        function changeSlide(direction) { showSlide(currentSlide + direction); }
+        function goToSlide(index) { showSlide(index); }
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else if (document.exitFullscreen) document.exitFullscreen();
+        }
+
+        init();
+    </script>
+</body>
+</html>

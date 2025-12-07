@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 1 - 認識 Vibe Coding</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .nav-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none !important;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-btn:hover, .nav-btn:visited, .nav-btn:active {
+            text-decoration: none !important;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.25);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.4);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(255,255,255,0.5);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            padding: 60px;
+            max-width: 1400px;
+            width: 95%;
+            max-height: 88vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        h1 { color: #667eea; font-size: 52px; margin-bottom: 24px; text-align: center; }
+        h2 { color: #764ba2; font-size: 36px; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 12px; }
+        h3 { color: #667eea; font-size: 26px; margin: 25px 0 15px 0; }
+        p, li { font-size: 22px; line-height: 1.9; color: #444; margin-bottom: 15px; }
+        ul, ol { margin-left: 30px; }
+
+        .highlight {
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+            margin: 3px;
+        }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        .concept-card {
+            background: linear-gradient(145deg, #f8f9ff, #fff);
+            padding: 30px;
+            border-radius: 16px;
+            border: 2px solid #e8eaff;
+            transition: all 0.3s;
+        }
+        .concept-card:hover {
+            transform: translateY(-8px);
+            border-color: #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+
+        .box {
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-left: 6px solid;
+            font-size: 20px;
+        }
+        .info { background: #e8f4fd; border-color: #667eea; color: #1a365d; }
+        .warning { background: #fef3cd; border-color: #f6ad55; color: #744210; }
+        .success { background: #e6ffed; border-color: #48bb78; color: #22543d; }
+
+        .emoji-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .indicators {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 4000;
+            padding: 10px 25px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dot.active { background: #fff; transform: scale(1.3); }
+        .dot:hover { background: rgba(255,255,255,0.7); }
+
+        .subtitle {
+            font-size: 28px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .tag-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .big-quote {
+            font-size: 28px;
+            font-style: italic;
+            color: #667eea;
+            text-align: center;
+            padding: 30px;
+            border-left: 4px solid #764ba2;
+            background: #f8f9ff;
+            border-radius: 0 12px 12px 0;
+            margin: 30px 0;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <div class="nav-title">Vibe Coding 氛圍編程 | Part 1: 認識 Vibe Coding</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="goToSlide(0)">首頁</button>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.facebook.com/yt3a01" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.youtube.com/@3aLearn" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <p style="color: #764ba2; letter-spacing: 3px; font-size: 18px; margin-bottom: 10px;">VIBE CODING 氛圍編程 | PART 1</p>
+                <h1 style="font-size: 64px;">認識 Vibe Coding</h1>
+                <p class="subtitle">歡迎來到 AI 輔助開發的新時代</p>
+                <div class="tag-container">
+                    <span class="highlight">氛圍編程</span>
+                    <span class="highlight">AI 協作</span>
+                    <span class="highlight">自然語言開發</span>
+                    <span class="highlight">零基礎友善</span>
+                </div>
+                <p style="margin-top: 40px; color: #888; font-size: 18px;">曾慶良 (阿亮老師) | 3A科技研究室</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: 學習目標 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本單元學習目標</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">💡</span>
+                        <h3>理解 Vibe Coding</h3>
+                        <p>什麼是氛圍編程？它如何改變傳統的程式開發流程？</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🎯</span>
+                        <h3>認識應用場景</h3>
+                        <p>Vibe Coding 可以應用在哪些領域？教育、商業、個人專案？</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🚀</span>
+                        <h3>掌握核心價值</h3>
+                        <p>為什麼 Vibe Coding 能讓零基礎者也能開發 AI 應用？</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔮</span>
+                        <h3>展望未來</h3>
+                        <p>AI 輔助開發將如何改變軟體開發產業？</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 什麼是 Vibe Coding -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>什麼是 Vibe Coding？</h2>
+                <div class="big-quote">
+                    「不再要求開發者精通每一行程式碼的語法細節，<br>
+                    而是透過<strong>描述你想要什麼</strong>的方式，與 AI 協作完成開發任務。」
+                </div>
+                <div class="two-column">
+                    <div>
+                        <h3>傳統開發方式</h3>
+                        <ul>
+                            <li>學習語法 → 練習寫程式碼</li>
+                            <li>記憶 API 文件</li>
+                            <li>手動除錯與測試</li>
+                            <li>需要數月甚至數年學習</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>Vibe Coding 方式</h3>
+                        <ul>
+                            <li>描述需求 → AI 生成程式碼</li>
+                            <li>自然語言溝通</li>
+                            <li>AI 協助除錯與優化</li>
+                            <li>短時間內產出成果</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Vibe Coding 的核心精神 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Vibe Coding 的核心精神</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">💬</span>
+                        <h3>自然語言驅動</h3>
+                        <p>用你習慣的語言描述需求，不需要學習程式語法。</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🤝</span>
+                        <h3>人機協作</h3>
+                        <p>AI 是你的開發夥伴，你負責創意，AI 負責實現。</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔄</span>
+                        <h3>迭代優化</h3>
+                        <p>透過持續對話，逐步完善功能，不斷改進。</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">⚡</span>
+                        <h3>快速產出</h3>
+                        <p>從想法到成品，大幅縮短開發時間。</p>
+                    </div>
+                </div>
+                <div class="box info">
+                    <strong>重點：</strong>Vibe Coding 的精髓在於「清晰表達想法」與「持續迭代改進」
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 學習曲線的改變 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>學習曲線的革命性改變</h2>
+                <div class="two-column">
+                    <div class="box warning" style="border-left-color: #e53e3e;">
+                        <h3 style="color: #c53030;">傳統學習路徑</h3>
+                        <ol>
+                            <li>學習變數與資料型態</li>
+                            <li>學習迴圈與條件判斷</li>
+                            <li>學習函式與模組</li>
+                            <li>學習資料庫操作</li>
+                            <li>學習網頁前後端</li>
+                            <li>⏰ 耗時：6個月 ~ 2年</li>
+                        </ol>
+                    </div>
+                    <div class="box success">
+                        <h3 style="color: #276749;">Vibe Coding 路徑</h3>
+                        <ol>
+                            <li>學習如何描述需求</li>
+                            <li>學習與 AI 有效溝通</li>
+                            <li>學習驗證與調整成果</li>
+                            <li>⏰ 開始產出：數小時 ~ 數天</li>
+                        </ol>
+                        <p style="margin-top: 15px;"><strong>邊做邊學，快速累積經驗！</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 應用場景 - 教育 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>應用場景 1：教育現場的變革</h2>
+                <div class="box info">
+                    <h3>案例：國中數學老師的 AI 助教</h3>
+                    <p style="font-size: 20px; line-height: 1.8;">
+                        一位國中數學老師，想要一個 LINE 聊天機器人，<br>
+                        當學生傳送數學問題時，它能用淺顯易懂的方式解釋，並提供練習題。
+                    </p>
+                </div>
+                <div class="concept-grid" style="margin-top: 30px;">
+                    <div class="concept-card">
+                        <span class="emoji-icon">🤖</span>
+                        <h3>24小時待命</h3>
+                        <p>學生隨時可以問問題</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">📊</span>
+                        <h3>個人化學習</h3>
+                        <p>根據學生程度調整難度</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">💰</span>
+                        <h3>成本極低</h3>
+                        <p>週末幾小時即可完成</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 應用場景 - 商業 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>應用場景 2：商業應用的機會</h2>
+                <div class="box info">
+                    <h3>案例：小型電商的智能客服</h3>
+                    <p style="font-size: 20px; line-height: 1.8;">
+                        電商創辦人想建立智能客服系統，處理訂單查詢、退換貨諮詢、產品推薦，<br>
+                        整合訂單資料庫，並在無法處理時轉接真人客服。
+                    </p>
+                </div>
+                <div class="two-column" style="margin-top: 30px;">
+                    <div>
+                        <h3>傳統方式</h3>
+                        <ul>
+                            <li>聘請開發團隊</li>
+                            <li>開發週期：3-6 個月</li>
+                            <li>成本：數十萬以上</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>Vibe Coding 方式</h3>
+                        <ul>
+                            <li>創辦人自己與 AI 協作</li>
+                            <li>開發週期：1-2 週</li>
+                            <li>成本：傳統的 1/10</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 應用場景 - 個人 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>應用場景 3：個人專案的實現</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">🎵</span>
+                        <h3>音樂視覺化播放器</h3>
+                        <p>高中生想建立將音樂轉換為動態視覺效果的應用</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">📚</span>
+                        <h3>論文摘要生成器</h3>
+                        <p>研究助理想自動整理文獻重點</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">💪</span>
+                        <h3>健身計畫生成器</h3>
+                        <p>創業者想驗證個人化訓練計畫的市場需求</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">📝</span>
+                        <h3>個人記帳本</h3>
+                        <p>想要一個符合自己習慣的財務管理工具</p>
+                    </div>
+                </div>
+                <div class="box success" style="margin-top: 20px;">
+                    <strong>這些「太複雜，不適合初學者」的專案，現在都能透過 Vibe Coding 實現！</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 創業與 MVP -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>應用場景 4：創業與快速驗證</h2>
+                <div class="big-quote">
+                    對於創業者而言，最寶貴的資源就是<strong>時間</strong>。<br>
+                    Vibe Coding 讓你能在幾天甚至幾小時內，<br>
+                    將想法轉化為可展示、可測試的 MVP。
+                </div>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">💡</span>
+                        <h3>有想法</h3>
+                        <p>健身計畫生成器</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🛠️</span>
+                        <h3>快速開發 MVP</h3>
+                        <p>用 Vibe Coding 幾小時完成</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🧪</span>
+                        <h3>市場測試</h3>
+                        <p>找潛在用戶試用回饋</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔄</span>
+                        <h3>快速迭代</h3>
+                        <p>根據回饋調整或放棄</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 總結 -->
+        <div class="slide">
+            <div class="content-card" style="text-align: center;">
+                <h2 style="border: none;">Part 1 重點回顧</h2>
+                <div class="concept-grid" style="text-align: left;">
+                    <div class="concept-card">
+                        <h3>Vibe Coding 是什麼？</h3>
+                        <p>透過自然語言與 AI 協作的新程式開發範式</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>核心價值</h3>
+                        <p>降低開發門檻、加速產品產出、讓想法快速實現</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>應用範圍</h3>
+                        <p>教育、商業、個人專案、創業驗證</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>關鍵思維</h3>
+                        <p>從「學會寫程式」轉變為「讓 AI 幫我實現想法」</p>
+                    </div>
+                </div>
+                <div style="margin-top: 40px;">
+                    <p style="font-size: 28px; color: #667eea; font-weight: bold;">
+                        下一單元：提示詞的藝術 - 如何與 AI 有效溝通
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="nav-arrow prev-arrow" id="prevBtn" onclick="changeSlide(-1)">❮</button>
+    <button class="nav-arrow next-arrow" id="nextBtn" onclick="changeSlide(1)">❯</button>
+
+    <div class="indicators" id="indicatorContainer"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function init() {
+            createIndicators();
+            showSlide(0);
+            updateButtons();
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        }
+
+        function createIndicators() {
+            const container = document.getElementById('indicatorContainer');
+            container.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => goToSlide(index);
+                container.appendChild(dot);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= totalSlides) index = totalSlides - 1;
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            currentSlide = index;
+
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+
+            updateButtons();
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

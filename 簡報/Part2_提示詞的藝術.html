@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 2 - 提示詞的藝術</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .nav-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none !important;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.4); transform: translateY(-2px); text-decoration: none !important; }
+        .nav-btn:visited, .nav-btn:active { text-decoration: none !important; color: white; }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.25);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.4);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover { background: rgba(255,255,255,0.5); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            padding: 60px;
+            max-width: 1400px;
+            width: 95%;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+
+        h1 { color: #1e3c72; font-size: 52px; margin-bottom: 24px; text-align: center; }
+        h2 { color: #2a5298; font-size: 36px; margin-bottom: 30px; border-bottom: 3px solid #1e3c72; padding-bottom: 12px; }
+        h3 { color: #1e3c72; font-size: 24px; margin: 20px 0 12px 0; }
+        p, li { font-size: 20px; line-height: 1.8; color: #444; margin-bottom: 12px; }
+        ul, ol { margin-left: 30px; }
+        code { background: #f0f2f5; padding: 3px 8px; border-radius: 6px; font-family: monospace; color: #d63384; font-weight: 600; }
+        pre { background: #282c34; color: #abb2bf; padding: 25px; border-radius: 12px; overflow-x: auto; margin: 20px 0; font-size: 16px; line-height: 1.6; }
+
+        .highlight { background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%); padding: 4px 10px; border-radius: 6px; font-weight: bold; color: #004d40; }
+
+        .concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 25px; }
+        .concept-card { background: #f8f9fa; padding: 25px; border-radius: 15px; border: 1px solid #e9ecef; transition: transform 0.3s; }
+        .concept-card:hover { transform: translateY(-8px); border-color: #4facfe; }
+
+        .box { padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 6px solid; font-size: 18px; }
+        .info { background: #e3f2fd; border-color: #2196f3; color: #0d47a1; }
+        .warning { background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .danger { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+
+        .indicators { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; z-index: 4000; padding: 10px 25px; background: rgba(0,0,0,0.3); border-radius: 30px; backdrop-filter: blur(5px); }
+        .dot { width: 12px; height: 12px; background: rgba(255,255,255,0.4); border-radius: 50%; cursor: pointer; transition: all 0.3s; }
+        .dot.active { background: #4facfe; transform: scale(1.3); }
+
+        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        @media (max-width: 900px) { .two-column { grid-template-columns: 1fr; } }
+
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .comparison-table th, .comparison-table td { padding: 15px; text-align: left; border: 1px solid #ddd; }
+        .comparison-table th { background: #1e3c72; color: white; }
+        .comparison-table tr:nth-child(even) { background: #f8f9fa; }
+
+        .emoji-icon { font-size: 42px; margin-bottom: 12px; display: block; }
+        .tag { display: inline-block; background: linear-gradient(90deg, #1e3c72, #2a5298); color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; margin: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <div class="nav-title">Vibe Coding 氛圍編程 | Part 2: 提示詞的藝術</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="goToSlide(0)">首頁</button>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.facebook.com/yt3a01" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.youtube.com/@3aLearn" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <p style="color: #4facfe; letter-spacing: 3px; font-size: 18px; margin-bottom: 10px;">VIBE CODING 氛圍編程 | PART 2</p>
+                <h1 style="font-size: 60px;">提示詞的藝術</h1>
+                <h2 style="border: none; font-weight: normal; font-size: 28px; color: #666; max-width: 800px;">
+                    如何與 AI 有效溝通
+                </h2>
+                <div style="margin-top: 40px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                    <span class="highlight">Prompt Engineering</span>
+                    <span class="highlight">明確具體</span>
+                    <span class="highlight">提供脈絡</span>
+                    <span class="highlight">循序漸進</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 學習目標 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🎯 本單元學習目標</h2>
+                <p>提示詞 (Prompt) 就是你與 AI 溝通的語言。學會寫好的提示詞，就能讓 AI 成為你最強大的開發夥伴。</p>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">📝</span>
+                        <h3>核心原則</h3>
+                        <p>掌握撰寫有效提示詞的三大原則</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">✨</span>
+                        <h3>範例學習</h3>
+                        <p>透過好壞範例對比，理解差異</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🚀</span>
+                        <h3>進階技巧</h3>
+                        <p>角色扮演、範例驅動、限制條件</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🔄</span>
+                        <h3>迭代優化</h3>
+                        <p>如何根據回應持續調整提示詞</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 提示詞的重要性 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>💡 為什麼提示詞這麼重要？</h2>
+                <div class="two-column">
+                    <div class="box danger">
+                        <h3>模糊的提示詞</h3>
+                        <p>「幫我做一個網站」</p>
+                        <p style="margin-top: 15px;">❌ AI 不知道：</p>
+                        <ul>
+                            <li>什麼類型的網站？</li>
+                            <li>需要什麼功能？</li>
+                            <li>用什麼技術？</li>
+                            <li>給誰用？</li>
+                        </ul>
+                    </div>
+                    <div class="box success">
+                        <h3>精確的提示詞</h3>
+                        <p>「建立一個待辦事項管理網站，使用者可以新增、編輯、刪除任務，並標記完成狀態，資料儲存在瀏覽器的 localStorage 中」</p>
+                        <p style="margin-top: 15px;">✅ AI 清楚知道：</p>
+                        <ul>
+                            <li>功能範圍</li>
+                            <li>技術選擇</li>
+                            <li>資料處理方式</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 核心原則 1 - 明確具體 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>📌 核心原則 1：明確具體</h2>
+                <p style="font-size: 24px; margin-bottom: 30px;">當你向 AI 描述需求時，<strong>越具體越好</strong>。</p>
+                <table class="comparison-table">
+                    <tr>
+                        <th style="width: 50%;">❌ 不好的寫法</th>
+                        <th style="width: 50%;">✅ 好的寫法</th>
+                    </tr>
+                    <tr>
+                        <td>「做一個登入功能」</td>
+                        <td>「建立一個登入頁面，包含帳號密碼輸入框、登入按鈕，驗證失敗時顯示錯誤訊息」</td>
+                    </tr>
+                    <tr>
+                        <td>「幫我處理資料」</td>
+                        <td>「讀取 CSV 檔案，過濾出銷售額大於 1000 的資料，並按日期排序」</td>
+                    </tr>
+                    <tr>
+                        <td>「做個聊天機器人」</td>
+                        <td>「建立一個 LINE 聊天機器人，能回答數學問題並提供解題步驟」</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 5: 核心原則 2 - 提供脈絡 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>📌 核心原則 2：提供脈絡</h2>
+                <p style="font-size: 22px;">告訴 AI 這個應用的<strong>使用情境、目標使用者、預期效果</strong>，能幫助它做出更適合的技術決策。</p>
+                <div class="box info" style="margin-top: 30px;">
+                    <h3>範例：加入脈絡資訊</h3>
+                    <p>「這個網站主要給<span class="highlight">國小學生</span>使用，所以介面要<span class="highlight">簡單直觀</span>，按鈕要<span class="highlight">大一點</span>，配色要<span class="highlight">活潑鮮豔</span>」</p>
+                </div>
+                <div class="concept-grid" style="margin-top: 30px;">
+                    <div class="concept-card">
+                        <h3>使用情境</h3>
+                        <p>在什麼場景下使用？</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>目標使用者</h3>
+                        <p>誰會使用這個系統？</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>預期效果</h3>
+                        <p>希望達成什麼目標？</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 核心原則 3 - 循序漸進 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>📌 核心原則 3：循序漸進</h2>
+                <p style="font-size: 22px;">複雜的專案應該<strong>拆解為多個小步驟</strong>，逐步與 AI 對話完成。</p>
+                <div class="box warning" style="margin-top: 20px;">
+                    <p><strong>❌ 不要這樣：</strong>「幫我建立一個包含會員系統、購物車、訂單管理、金流整合的電商網站」</p>
+                </div>
+                <div class="box success">
+                    <p><strong>✅ 應該這樣：</strong>分階段進行</p>
+                    <ol style="margin-top: 10px;">
+                        <li>先建立基本的商品展示頁面</li>
+                        <li>加入購物車功能</li>
+                        <li>實作會員登入系統</li>
+                        <li>整合金流付款</li>
+                    </ol>
+                </div>
+                <p style="margin-top: 20px; font-size: 20px;">這種漸進式的開發方式，不僅讓過程<strong>更可控</strong>，也方便<strong>除錯和調整</strong>。</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: 好的提示詞範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>✨ 好的提示詞完整範例</h2>
+                <div class="box info">
+                    <p style="font-size: 18px; line-height: 2;">
+                        「我想建立一個 <span class="highlight">AI 文章摘要工具</span>，請協助我實現以下功能：<br><br>
+                        <strong>前端</strong>：使用簡單的 HTML 和 JavaScript，提供一個文字輸入區域讓使用者貼上長篇文章，以及一個『生成摘要』按鈕。<br><br>
+                        <strong>後端</strong>：點擊按鈕後，將文章內容傳送到後端 Python Flask API。<br><br>
+                        <strong>AI 整合</strong>：後端接收文章內容後，調用 OpenAI 的 GPT-4 API 進行摘要，摘要長度控制在 150 字以內，重點放在文章的主要論點和結論。<br><br>
+                        <strong>開發順序</strong>：請先提供後端 Flask 的程式碼，包含 API 端點的設計和 OpenAI API 的串接方式。」
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 範例分析 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🔍 為什麼這是好的提示詞？</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <span class="emoji-icon">🎯</span>
+                        <h3>明確的功能</h3>
+                        <p>輸入文章 → 生成摘要</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">🛠️</span>
+                        <h3>指定技術堆疊</h3>
+                        <p>HTML、JavaScript、Python Flask、OpenAI API</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">📏</span>
+                        <h3>具體參數</h3>
+                        <p>摘要長度 150 字、聚焦論點和結論</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">📋</span>
+                        <h3>開發順序</h3>
+                        <p>先後端再前端，有明確步驟</p>
+                    </div>
+                </div>
+                <div class="box success" style="margin-top: 30px;">
+                    <p><strong>結論：</strong>AI 收到這樣的提示詞，就能產出精確符合需求的程式碼！</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 進階技巧 - 角色扮演 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🎭 進階技巧 1：角色扮演</h2>
+                <p style="font-size: 22px;">要求 AI 以特定角色的視角來協助你，能獲得更專業的回應。</p>
+                <div class="two-column" style="margin-top: 30px;">
+                    <div class="box info">
+                        <h3>範例 1</h3>
+                        <p>「請以<span class="highlight">資深全端工程師</span>的角度，協助我設計這個電商系統的架構，考慮到可擴展性和安全性」</p>
+                    </div>
+                    <div class="box info">
+                        <h3>範例 2</h3>
+                        <p>「請以<span class="highlight">UI/UX 設計師</span>的角度，評估這個介面設計，並提出改進建議」</p>
+                    </div>
+                </div>
+                <div class="box success" style="margin-top: 20px;">
+                    <p><strong>效果：</strong>AI 會更注重專業的技術選擇和最佳實踐</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 進階技巧 - 範例驅動 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>📚 進階技巧 2：範例驅動</h2>
+                <p style="font-size: 22px;">如果你想建立的功能類似於某個知名應用，可以直接參照。</p>
+                <div class="concept-grid" style="margin-top: 30px;">
+                    <div class="concept-card">
+                        <h3>參照知名產品</h3>
+                        <p>「類似於 <span class="highlight">Notion</span> 的區塊編輯功能，我想實作一個可以拖放排序的內容編輯器」</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>參照既有程式碼</h3>
+                        <p>「這是我現有的登入功能程式碼，請幫我加入 Google OAuth 整合」</p>
+                    </div>
+                </div>
+                <div class="box info" style="margin-top: 20px;">
+                    <p><strong>優點：</strong>這比你自己描述所有細節要清楚得多，AI 能快速理解你的期望</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 進階技巧 - 限制條件 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🔒 進階技巧 3：限制條件與輸出格式</h2>
+                <div class="two-column">
+                    <div>
+                        <h3>限制條件</h3>
+                        <div class="box warning">
+                            <p>「請使用 <span class="highlight">Python 3.10</span> 以上版本，避免使用已棄用的套件，並確保程式碼可以在 <span class="highlight">Windows 環境</span>執行」</p>
+                        </div>
+                        <p style="margin-top: 15px;">避免 AI 使用不適合的技術</p>
+                    </div>
+                    <div>
+                        <h3>輸出格式</h3>
+                        <div class="box info">
+                            <p>「請以 <span class="highlight">Markdown 格式</span>輸出，包含程式碼區塊和詳細的說明文字，每個步驟都要有註解」</p>
+                        </div>
+                        <p style="margin-top: 15px;">讓回應更容易閱讀和使用</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 迭代優化 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>🔄 提示詞的迭代優化</h2>
+                <p style="font-size: 22px;">撰寫提示詞是一個<strong>迭代的過程</strong>。第一次不完美很正常！</p>
+                <div class="concept-grid" style="margin-top: 30px;">
+                    <div class="concept-card">
+                        <span class="emoji-icon">1️⃣</span>
+                        <h3>初次嘗試</h3>
+                        <p>提供基本需求描述</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">2️⃣</span>
+                        <h3>觀察回應</h3>
+                        <p>檢查 AI 產出的結果</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">3️⃣</span>
+                        <h3>提供回饋</h3>
+                        <p>說明哪裡需要調整</p>
+                    </div>
+                    <div class="concept-card">
+                        <span class="emoji-icon">4️⃣</span>
+                        <h3>持續改進</h3>
+                        <p>逐步完善直到滿意</p>
+                    </div>
+                </div>
+                <div class="box info" style="margin-top: 20px;">
+                    <h3>回饋範例</h3>
+                    <p>「剛才的程式碼在處理中文字元時會出現亂碼，請修改為支援 UTF-8 編碼」</p>
+                    <p>「介面看起來太擁擠，請增加元素之間的間距，並使用更柔和的配色」</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: 總結 -->
+        <div class="slide">
+            <div class="content-card" style="text-align: center;">
+                <h2 style="border: none;">Part 2 重點回顧</h2>
+                <div class="concept-grid" style="text-align: left; margin-top: 30px;">
+                    <div class="concept-card">
+                        <h3>核心原則</h3>
+                        <p>明確具體、提供脈絡、循序漸進</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>進階技巧</h3>
+                        <p>角色扮演、範例驅動、限制條件</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>迭代優化</h3>
+                        <p>觀察回應 → 提供回饋 → 持續改進</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3>關鍵心態</h3>
+                        <p>不怕失敗，透過對話逐步完善</p>
+                    </div>
+                </div>
+                <div style="margin-top: 40px;">
+                    <p style="font-size: 26px; color: #1e3c72; font-weight: bold;">
+                        下一單元：實用工具 - Vibe Coding 捕夢網 & OpenAI Playground
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="nav-arrow prev-arrow" id="prevBtn" onclick="changeSlide(-1)">❮</button>
+    <button class="nav-arrow next-arrow" id="nextBtn" onclick="changeSlide(1)">❯</button>
+    <div class="indicators" id="indicatorContainer"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function init() {
+            createIndicators();
+            showSlide(0);
+            updateButtons();
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        }
+
+        function createIndicators() {
+            const container = document.getElementById('indicatorContainer');
+            container.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => goToSlide(index);
+                container.appendChild(dot);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= totalSlides) index = totalSlides - 1;
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            currentSlide = index;
+            document.querySelectorAll('.dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+            updateButtons();
+        }
+
+        function changeSlide(direction) { showSlide(currentSlide + direction); }
+        function goToSlide(index) { showSlide(index); }
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else if (document.exitFullscreen) document.exitFullscreen();
+        }
+
+        init();
+    </script>
+</body>
+</html>
